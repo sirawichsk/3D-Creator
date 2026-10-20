@@ -24,7 +24,7 @@
         }
         .brand { 
             font-size: 20px; font-weight: bold; color: #c9a77e; margin-right: 40px; 
-            letter-spacing: 1px; display: flex; align-items: center; gap: 10px; line-height: 1;
+            letter-spacing: 1px; display: flex; align-items: center; gap: 10px; line-height: 1; flex-shrink: 0;
         }
         .brand-icon { 
             width: 30px; height: 30px; background-image: url('logo/logo.png'); 
@@ -35,7 +35,7 @@
             color: #888; text-decoration: none; padding: 0 20px; height: 40px; 
             display: inline-flex; align-items: center; justify-content: center;
             font-size: 15px; font-weight: bold; line-height: 1; border-radius: 6px; 
-            margin-right: 5px; box-sizing: border-box; border: none; 
+            margin-right: 5px; box-sizing: border-box; border: none; flex-shrink: 0;
         }
         .nav-link:hover { color: #fff; background-color: #222; }
         .nav-link.active { 
@@ -44,21 +44,25 @@
             box-shadow: inset 0 -2px 0 0 #00ba7c; 
         }
         
-        #main-content { display: flex; flex-grow: 1; overflow: hidden; }
-        #sidebar { width: 410px; background-color: #121212; padding: 25px; box-shadow: 2px 0 15px rgba(0,0,0,0.8); z-index: 10; overflow-y: auto; border-right: 1px solid #333; }
-        #viewer { flex-grow: 1; position: relative; background-color: #1a1a1a; }
+        /* ล็อกขนาดแถบเมนูไม่ให้ถูกบีบ และบังคับให้หน้าต่างพรีวิว (#viewer) เล็กลงแทนเมื่อย่อหน้าจอ */
+        #main-content { display: flex; flex: 1 1 auto; overflow: hidden; width: 100%; min-width: 0; }
+        #sidebar { 
+            width: 410px; min-width: 410px; max-width: 410px; flex-shrink: 0; 
+            background-color: #121212; padding: 25px; box-shadow: 2px 0 15px rgba(0,0,0,0.8); 
+            z-index: 10; overflow-y: auto; border-right: 1px solid #333; box-sizing: border-box; 
+        }
+        #viewer { 
+            flex: 1 1 auto; min-width: 0; min-height: 0; 
+            position: relative; background-color: #1a1a1a; overflow: hidden; 
+        }
+        #viewer canvas { display: block; width: 100% !important; height: 100% !important; outline: none; }
         
         h2 { margin-top: 0; color: #fff; font-size: 20px; border-bottom: 1px solid #333; padding-bottom: 12px; margin-bottom: 15px; }
         h3 { font-size: 14px; color: #c9a77e; margin-bottom: 10px; margin-top: 0; }
         
-        /* เส้นแบ่งคั่นแต่ละหัวข้อ */
-        .section-divider {
-            border: 0;
-            border-top: 1px solid #2e2e2e;
-            margin: 18px 0;
-        }
+        .section-divider { border: 0; border-top: 1px solid #2e2e2e; margin: 18px 0; }
         
-        input[type="text"] { width: 100%; padding: 10px 12px; border: 1px solid #444; border-radius: 8px; box-sizing: border-box; font-size: 15px; background-color: #2a2a2a; color: #fff; outline: none; transition: 0.3s; margin-bottom: 10px; }
+        input[type="text"] { width: 100%; padding: 10px 12px; border: 1px solid #444; border-radius: 8px; box-sizing: border-box; font-size: 15px; background-color: #2a2a2a; color: #fff; outline: none; transition: 0.3s; margin-bottom: 10px; font-family: inherit; }
         input[type="text"]:focus { border-color: #00ba7c; }
         
         #fontGrid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 5px; max-height: 170px; overflow-y: auto; padding-right: 5px; }
@@ -69,7 +73,7 @@
         .font-card .font-name { font-size: 11px; color: #888; }
         
         .segmented-control { display: flex; gap: 5px; background: #222; padding: 5px; border-radius: 10px; margin-bottom: 10px; }
-        .seg-btn { flex: 1; padding: 8px 4px; background: transparent; border: none; color: #aaa; border-radius: 6px; cursor: pointer; font-weight: bold; font-size: 12px; transition: 0.2s; text-align: center; }
+        .seg-btn { flex: 1; padding: 8px 4px; background: transparent; border: none; color: #aaa; border-radius: 6px; cursor: pointer; font-weight: bold; font-size: 12px; transition: 0.2s; text-align: center; font-family: inherit; }
         .seg-btn.active { background: #3a3a3a; color: #fff; box-shadow: 0 2px 5px rgba(0,0,0,0.2); }
         
         .emoji-btn-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 12px; }
@@ -88,11 +92,30 @@
         input[type="range"] { width: 100%; accent-color: #c9a77e; cursor: pointer; }
         
         .info-box { background: #1a2621; border: 1px solid #00ba7c; border-radius: 8px; padding: 10px; font-size: 12px; color: #bde0d2; margin-bottom: 12px; line-height: 1.4; }
+
+        /* ปุ่มกดเพื่อเปิด-ปิดถาดเลือกสีส่วนกลาง */
+        .color-picker-trigger {
+            width: 100%; padding: 9px 12px; background: #222; border: 1px solid #444; border-radius: 8px;
+            color: #eee; cursor: pointer; display: flex; align-items: center; justify-content: space-between;
+            font-family: inherit; font-size: 13px; font-weight: bold; transition: 0.2s; box-sizing: border-box;
+        }
+        .color-picker-trigger:hover { border-color: #00ba7c; background: #292929; }
+        .color-trigger-left { display: flex; align-items: center; gap: 8px; }
+        .stock-color-dot { width: 16px; height: 16px; border-radius: 50%; border: 1px solid rgba(255,255,255,0.4); display: inline-block; flex-shrink: 0; }
         
-        .btn-stl { width: 100%; padding: 14px; background-color: #00ba7c; color: white; margin-top: 10px; border: none; border-radius: 8px; font-size: 15px; font-weight: bold; cursor: pointer; transition: 0.2s; }
+        .stock-color-dropdown {
+            display: none; flex-wrap: wrap; gap: 6px; margin-top: 6px; padding: 10px;
+            background: #181818; border: 1px solid #333; border-radius: 8px;
+        }
+        .stock-color-dropdown.open { display: flex; }
+        .stock-color-pill { display: inline-flex; align-items: center; gap: 6px; padding: 5px 10px; background: #252525; border: 2px solid #383838; border-radius: 20px; color: #ccc; font-size: 12px; cursor: pointer; transition: 0.15s; font-family: inherit; }
+        .stock-color-pill:hover { border-color: #666; color: #fff; }
+        .stock-color-pill.active { border-color: #00ba7c; background: #1a2a24; color: #fff; font-weight: bold; }
+        
+        .btn-stl { width: 100%; padding: 14px; background-color: #00ba7c; color: white; margin-top: 10px; border: none; border-radius: 8px; font-size: 15px; font-weight: bold; cursor: pointer; transition: 0.2s; font-family: inherit; }
         .btn-stl:hover { background-color: #009664; }
 
-        .btn-3mf { width: 100%; padding: 14px; background-color: #0088cc; color: white; margin-top: 10px; border: none; border-radius: 8px; font-size: 15px; font-weight: bold; cursor: pointer; transition: 0.2s; }
+        .btn-3mf { width: 100%; padding: 14px; background-color: #0088cc; color: white; margin-top: 10px; border: none; border-radius: 8px; font-size: 15px; font-weight: bold; cursor: pointer; transition: 0.2s; font-family: inherit; }
         .btn-3mf:hover { background-color: #006699; }
         
         ::-webkit-scrollbar { width: 6px; }
@@ -191,16 +214,32 @@
 
             <hr class="section-divider">
 
-            <h3>5. ตั้งค่าสี (Colors)</h3>
-            <div class="slider-group" style="display: flex; gap: 10px; margin-bottom: 0;">
-                <div style="flex: 1;">
-                    <div class="slider-header"><span style="font-size: 11px;">สีฐาน (Base)</span></div>
-                    <input type="color" id="baseColorInput" value="#ffffff" oninput="processModelUpdate()" style="width: 100%; height: 35px; border: none; border-radius: 6px; cursor: pointer; background: #222; padding: 2px;">
-                </div>
-                <div style="flex: 1;">
-                    <div class="slider-header"><span style="font-size: 11px;">สีขอบ/ตัวอักษร (Top)</span></div>
-                    <input type="color" id="topColorInput" value="#76b843" oninput="processModelUpdate()" style="width: 100%; height: 35px; border: none; border-radius: 6px; cursor: pointer; background: #222; padding: 2px;">
-                </div>
+            <!-- ระบบสีส่วนกลาง (คลิกที่สีเพื่อเปิดถาดตัวเลือกสีในสต๊อก) -->
+            <h3>5. ตั้งค่าสี (คลิกที่สีเพื่อเปลี่ยน)</h3>
+            <div class="slider-group">
+                <div class="slider-header"><span>สีที่ 1: สีฐานป้าย (Base Color)</span></div>
+                <button type="button" class="color-picker-trigger" onclick="toggleColorDropdown('base')">
+                    <span class="color-trigger-left">
+                        <span class="stock-color-dot" id="baseSelectedDot" style="background:#ffffff;"></span>
+                        <span id="baseSelectedName">ขาว (White)</span>
+                    </span>
+                    <span style="font-size:11px; color:#888;">▼ เปลี่ยนสี</span>
+                </button>
+                <div class="stock-color-dropdown" id="baseColorSwatchContainer"></div>
+                <input type="hidden" id="baseColorInput" value="#ffffff">
+            </div>
+
+            <div class="slider-group" style="margin-bottom: 0;">
+                <div class="slider-header"><span>สีที่ 2: สีขอบ / ตัวอักษร / อีโมจิ (Top Color)</span></div>
+                <button type="button" class="color-picker-trigger" onclick="toggleColorDropdown('top')">
+                    <span class="color-trigger-left">
+                        <span class="stock-color-dot" id="topSelectedDot" style="background:#00ba7c;"></span>
+                        <span id="topSelectedName">เขียว (Green)</span>
+                    </span>
+                    <span style="font-size:11px; color:#888;">▼ เปลี่ยนสี</span>
+                </button>
+                <div class="stock-color-dropdown" id="topColorSwatchContainer"></div>
+                <input type="hidden" id="topColorInput" value="#00ba7c">
             </div>
 
             <hr class="section-divider">
@@ -217,9 +256,9 @@
             <div class="slider-group">
                 <div class="slider-header">
                     <span style="color: #00ba7c;">ความหนาของกรอบขอบป้าย (Rim) mm</span>
-                    <input type="number" id="rimWidthVal" class="slider-value-input" value="2.2" step="0.2" onkeypress="handleInputEnter(event, 'rimWidthVal', 'rimWidthSlider')" onblur="updateSlidersFromInput('rimWidthVal', 'rimWidthSlider')">
+                    <input type="number" id="rimWidthVal" class="slider-value-input" value="1.5" step="0.2" onkeypress="handleInputEnter(event, 'rimWidthVal', 'rimWidthSlider')" onblur="updateSlidersFromInput('rimWidthVal', 'rimWidthSlider')">
                 </div>
-                <input type="range" id="rimWidthSlider" min="0.8" max="4.0" step="0.1" value="2.2" oninput="updateSlidersFromRange()">
+                <input type="range" id="rimWidthSlider" min="0.8" max="4.0" step="0.1" value="1.5" oninput="updateSlidersFromRange()">
             </div>
 
             <div class="slider-group">
@@ -263,7 +302,8 @@
         <div id="viewer"></div>
     </div>
 
-    <script src="script_pet.js"></script>
+    <!-- โหลด shop_system.js ก่อน เพื่อให้ดึงฟอนต์ส่วนกลางและสีส่วนกลางได้ทันที -->
     <script src="shop_system.js"></script>
+    <script src="script_pet.js"></script>
 </body>
 </html>

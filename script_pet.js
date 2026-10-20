@@ -1,22 +1,10 @@
 // ==========================================
-// 1. ตั้งค่ารายการฟอนต์และตัวแปรหลัก
+// 1. ตั้งค่ารายการฟอนต์และสีส่วนกลาง (ดึงจาก shop_system.js)
 // ==========================================
-const fontConfig = [
-    { name: "Chewy", file: "Chewy-Regular.ttf" },
-    { name: "Prompt", file: "Prompt-Bold.ttf" },
-    { name: "Mitr", file: "Mitr-SemiBold.ttf" },
-    { name: "Athiti", file: "Athiti-Bold.ttf" },
-    { name: "Luckiest_Guy", file: "LuckiestGuy-Regular.ttf" },
-    { name: "Noto_Sans_Thai", file: "NotoSansThai-VariableFont_wdth,wght.ttf" },
-    { name: "Oleo_Script", file: "OleoScript-Bold.ttf" },
-    { name: "Titan_One", file: "TitanOne-Regular.ttf" },
-    { name: "Kanit", file: "Kanit-ExtraBold.ttf" },
-    { name: "Super Basic", file: "Super Basic.ttf" }
-];
-
+let fontConfig = [];
 let currentPetShape = 'bone'; // 'bone', 'fish', 'circle'
 let isCircleNfcEnabled = false;
-let currentFontFile = fontConfig[0].file;
+let currentFontFile = "Mitr-SemiBold.ttf";
 let currentFont = null;
 let currentFontUrl = "";
 
@@ -27,8 +15,111 @@ let nextEmojiId = 1;
 // ตำแหน่งพิเศษของสัญลักษณ์ NFC
 let customNfcPos = null;
 
+window.defaultFilamentColors = [
+    { name: "เหลือง (Yellow)", hex: "#f5c400", active: true },
+    { name: "ดำ (Black)", hex: "#1a1a1a", active: true },
+    { name: "ขาว (White)", hex: "#ffffff", active: true },
+    { name: "แดง (Red)", hex: "#e62e2e", active: true },
+    { name: "เขียว (Green)", hex: "#00ba7c", active: true },
+    { name: "ฟ้ามิ้นต์ (Mint)", hex: "#4dd0e1", active: true },
+    { name: "น้ำเงิน (Blue)", hex: "#1e66d0", active: true },
+    { name: "ชมพู (Pink)", hex: "#ff77a9", active: true },
+    { name: "ส้ม (Orange)", hex: "#ff7b00", active: true },
+    { name: "ทอง/น้ำตาล (Gold)", hex: "#c99e52", active: true }
+];
+
+function getFontFolderPath() {
+    return window.FONT_FOLDER_PATH || "font/";
+}
+
 // ==========================================
-// 2. ฟังก์ชันจัดการอีโมจิ (รอยเท้าหมา / หัวใจ)
+// 2. ฟังก์ชันจัดการระบบสีส่วนกลาง (คลิกเพื่อกางตัวเลือกสี)
+// ==========================================
+function getAvailablePalette() {
+    if (typeof priceConfig !== "undefined" && Array.isArray(priceConfig.filament_colors) && priceConfig.filament_colors.length > 0) {
+        return priceConfig.filament_colors.filter(function(c) { return c.active !== false; });
+    }
+    return window.defaultFilamentColors;
+}
+
+window.refreshFilamentSwatchesUI = function() {
+    renderColorSwatches();
+};
+
+function toggleColorDropdown(which) {
+    const baseDrop = document.getElementById("baseColorSwatchContainer");
+    const topDrop = document.getElementById("topColorSwatchContainer");
+    if (!baseDrop || !topDrop) return;
+    if (which === "base") {
+        baseDrop.classList.toggle("open");
+        topDrop.classList.remove("open");
+    } else {
+        topDrop.classList.toggle("open");
+        baseDrop.classList.remove("open");
+    }
+}
+
+function renderColorSwatches() {
+    const palette = getAvailablePalette();
+    const baseInput = document.getElementById("baseColorInput");
+    const topInput = document.getElementById("topColorInput");
+    if (!baseInput || !topInput) return;
+
+    const baseHex = baseInput.value;
+    const topHex = topInput.value;
+
+    const baseBox = document.getElementById("baseColorSwatchContainer");
+    const topBox = document.getElementById("topColorSwatchContainer");
+    if (!baseBox || !topBox) return;
+
+    baseBox.innerHTML = "";
+    topBox.innerHTML = "";
+
+    let baseFoundName = baseHex;
+    let topFoundName = topHex;
+
+    palette.forEach(function(col) {
+        if (col.hex.toLowerCase() === baseHex.toLowerCase()) baseFoundName = col.name;
+        if (col.hex.toLowerCase() === topHex.toLowerCase()) topFoundName = col.name;
+
+        const bBtn = document.createElement("button");
+        bBtn.type = "button";
+        bBtn.className = "stock-color-pill" + (col.hex.toLowerCase() === baseHex.toLowerCase() ? " active" : "");
+        bBtn.innerHTML = '<span class="stock-color-dot" style="background:' + col.hex + '"></span>' + col.name;
+        bBtn.onclick = function() {
+            baseInput.value = col.hex;
+            baseBox.classList.remove("open");
+            renderColorSwatches();
+            processModelUpdate();
+        };
+        baseBox.appendChild(bBtn);
+
+        const tBtn = document.createElement("button");
+        tBtn.type = "button";
+        tBtn.className = "stock-color-pill" + (col.hex.toLowerCase() === topHex.toLowerCase() ? " active" : "");
+        tBtn.innerHTML = '<span class="stock-color-dot" style="background:' + col.hex + '"></span>' + col.name;
+        tBtn.onclick = function() {
+            topInput.value = col.hex;
+            topBox.classList.remove("open");
+            renderColorSwatches();
+            processModelUpdate();
+        };
+        topBox.appendChild(tBtn);
+    });
+
+    const baseDot = document.getElementById("baseSelectedDot");
+    const baseNameEl = document.getElementById("baseSelectedName");
+    if (baseDot) baseDot.style.background = baseHex;
+    if (baseNameEl) baseNameEl.innerText = baseFoundName;
+
+    const topDot = document.getElementById("topSelectedDot");
+    const topNameEl = document.getElementById("topSelectedName");
+    if (topDot) topDot.style.background = topHex;
+    if (topNameEl) topNameEl.innerText = topFoundName;
+}
+
+// ==========================================
+// 3. ฟังก์ชันจัดการอีโมจิ (รอยเท้าหมา / หัวใจ)
 // ==========================================
 function resetDefaultEmojis() {
     const tagW = parseFloat(document.getElementById('tagWidthSlider').value) || 50;
@@ -40,10 +131,8 @@ function resetDefaultEmojis() {
         emojiItems.push({ id: nextEmojiId++, type: 'eye', x: -tagW * 0.33, y: tagW * 0.03, angle: 0 });
         emojiItems.push({ id: nextEmojiId++, type: 'heart', x: tagW * 0.27, y: -tagW * 0.03, angle: 0 });
     } else if (currentPetShape === 'circle') {
-        // ด้านบน 2 รอยเท้า
         emojiItems.push({ id: nextEmojiId++, type: 'paw', x: -tagW * 0.06, y: tagW * 0.23, angle: 12 });
         emojiItems.push({ id: nextEmojiId++, type: 'paw', x: tagW * 0.13, y: tagW * 0.16, angle: -15 });
-        // ถ้าไม่ได้เปิด NFC ให้ใส่รอยเท้าคู่ด้านล่างเป็นค่าเริ่มต้น
         if (!isCircleNfcEnabled) {
             emojiItems.push({ id: nextEmojiId++, type: 'paw', x: -tagW * 0.11, y: -tagW * 0.29, angle: 15 });
             emojiItems.push({ id: nextEmojiId++, type: 'paw', x: tagW * 0.08, y: -tagW * 0.34, angle: -12 });
@@ -54,14 +143,12 @@ function resetDefaultEmojis() {
 }
 
 function clearAllEmojis() {
-    // ในโหมดปลา เก็บจุดตาปลาไว้ หรือลบเฉพาะรอยเท้ากับหัวใจ
     emojiItems = emojiItems.filter(item => item.type === 'eye');
     processModelUpdate();
 }
 
 function addEmoji(type) {
     const tagW = parseFloat(document.getElementById('tagWidthSlider').value) || 50;
-    // สุ่มขยับตำแหน่งนิดหน่อยเวลาเพิ่มหลายอันจะได้ไม่ทับกันสนิท
     const offset = (emojiItems.length % 3 - 1) * (tagW * 0.08);
     emojiItems.push({
         id: nextEmojiId++,
@@ -74,24 +161,50 @@ function addEmoji(type) {
 }
 
 // ==========================================
-// 3. ฟังก์ชันควบคุม UI
+// 4. ฟังก์ชันควบคุม UI และฟอนต์ส่วนกลาง
 // ==========================================
 function initUI() {
+    const defaultTenFonts = [
+        { name: "Mitr SemiBold", file: "Mitr-SemiBold.ttf", family: "Mitr" },
+        { name: "Chewy", file: "Chewy-Regular.ttf", family: "Chewy" },
+        { name: "Kanit ExtraBold", file: "Kanit-ExtraBold.ttf", family: "Kanit" },
+        { name: "Prompt Bold", file: "Prompt-Bold.ttf", family: "Prompt" },
+        { name: "Athiti Bold", file: "Athiti-Bold.ttf", family: "Athiti" },
+        { name: "NotoSansThai", file: "NotoSansThai-VariableFont_wdth,wght.ttf", family: "NotoSansThai" },
+        { name: "LuckiestGuy", file: "LuckiestGuy-Regular.ttf", family: "LuckiestGuy" },
+        { name: "OleoScript", file: "OleoScript-Bold.ttf", family: "OleoScript" },
+        { name: "Super Basic", file: "Super Basic.ttf", family: "SuperBasic" },
+        { name: "TitanOne", file: "TitanOne-Regular.ttf", family: "TitanOne" }
+    ];
+
+    if (window.shopFontConfig && window.shopFontConfig.length >= 8) {
+        fontConfig = window.shopFontConfig;
+    } else {
+        fontConfig = defaultTenFonts;
+        window.shopFontConfig = defaultTenFonts;
+    }
+
+    const mitrFound = fontConfig.find(function(f) { return f.file === "Mitr-SemiBold.ttf"; });
+    currentFontFile = mitrFound ? mitrFound.file : fontConfig[0].file;
+
+    const folder = getFontFolderPath();
     const grid = document.getElementById('fontGrid');
+    grid.innerHTML = "";
     let styleHTML = "";
 
     fontConfig.forEach((f, index) => {
+        const famName = f.family || `PreviewFont_${index}`;
         styleHTML += `
             @font-face {
-                font-family: 'PreviewFont_${index}';
-                src: url('font/${f.file}') format('truetype');
+                font-family: '${famName}';
+                src: url('${folder}${encodeURI(f.file)}') format('truetype');
             }
         `;
         const card = document.createElement('div');
-        card.className = `font-card ${index === 0 ? 'active' : ''}`;
+        card.className = `font-card ${f.file === currentFontFile ? 'active' : ''}`;
         card.onclick = () => selectFont(index, card);
         card.innerHTML = `
-            <div class="preview-text" id="previewText_${index}" style="font-family: 'PreviewFont_${index}', sans-serif;">SIMBA</div>
+            <div class="preview-text" id="previewText_${index}" style="font-family: '${famName}', sans-serif;">SIMBA</div>
             <div class="font-name">${f.name}</div>
         `;
         grid.appendChild(card);
@@ -100,6 +213,14 @@ function initUI() {
     const styleTag = document.createElement('style');
     styleTag.innerHTML = styleHTML;
     document.head.appendChild(styleTag);
+
+    // บังคับตั้งค่าเริ่มต้นความหนากรอบขอบป้ายเป็น 1.5 mm
+    const rimS = document.getElementById('rimWidthSlider');
+    const rimV = document.getElementById('rimWidthVal');
+    if (rimS) rimS.value = 1.5;
+    if (rimV) rimV.value = "1.5";
+
+    renderColorSwatches();
 }
 
 function updatePreviewText() {
@@ -126,25 +247,27 @@ function setPetShape(shape, btn) {
     const phoneLabel = document.getElementById('phoneLabel');
     const backHint = document.getElementById('backPhoneHint');
 
+    // ตั้งค่าความหนาขอบป้าย (rimWidthSlider) เริ่มต้นที่ 1.5 ทุกทรงตามที่กำหนด
     if (shape === 'circle') {
         circleBlock.style.display = 'block';
         phoneLabel.innerText = 'เบอร์โทรศัพท์ (นูนด้านหน้า):';
         backHint.style.display = 'none';
         document.getElementById('tagWidthSlider').value = 40;
-        document.getElementById('rimWidthSlider').value = 1.4;
+        document.getElementById('rimWidthSlider').value = 1.5;
         document.getElementById('fontSizeSlider').value = 7.5;
         document.getElementById('phoneSizeSlider').value = 4.2;
-        document.getElementById('topColorInput').value = '#222222';
+        document.getElementById('topColorInput').value = '#1a1a1a';
     } else {
         circleBlock.style.display = 'none';
         phoneLabel.innerText = 'เบอร์โทรศัพท์ (ปั๊มจมด้านหลัง ไม่ใส่สี):';
         backHint.style.display = 'block';
         document.getElementById('tagWidthSlider').value = 50;
-        document.getElementById('rimWidthSlider').value = 2.2;
+        document.getElementById('rimWidthSlider').value = 1.5;
         document.getElementById('fontSizeSlider').value = 9.0;
         document.getElementById('phoneSizeSlider').value = 5.5;
-        document.getElementById('topColorInput').value = (shape === 'bone') ? '#76b843' : '#2b65ec';
+        document.getElementById('topColorInput').value = (shape === 'bone') ? '#00ba7c' : '#1e66d0';
     }
+    renderColorSwatches();
     resetDefaultEmojis();
     updateSlidersFromRange();
 }
@@ -197,7 +320,6 @@ function updateSlidersFromRange() {
     let nfcD = parseFloat(document.getElementById('nfcDiaSlider').value);
     let nfcT = parseFloat(document.getElementById('nfcThickSlider').value);
 
-    // ป้องกันช่อง NFC ใหญ่ทะลุขอบป้าย (เว้นขอบอย่างน้อยฝั่งละ 2mm)
     if (nfcD >= tagW - 4) {
         nfcD = tagW - 4;
         document.getElementById('nfcDiaSlider').value = nfcD;
@@ -221,31 +343,41 @@ function updateSlidersFromRange() {
 }
 
 // ==========================================
-// 4. ตั้งค่าฉาก 3D
+// 5. ตั้งค่าฉาก 3D และจัดไฟสตูดิโอแบบเดียวกับ Tag กระเป๋า
 // ==========================================
 const viewer = document.getElementById('viewer');
 const scene = new THREE.Scene();
 
-scene.add(new THREE.AmbientLight(0xffffff, 0.65));
-const dirLight1 = new THREE.DirectionalLight(0xffffff, 0.8);
-dirLight1.position.set(20, -30, 60);
-scene.add(dirLight1);
+// ใช้ชุดไฟ Raking Studio Lighting เหมือนหน้า Tag กระเป๋าเป๊ะ เพื่อลดแสงสะท้อนหน้าตรงและเห็นมิติชัดเจน
+scene.add(new THREE.AmbientLight(0xffffff, 0.42));
 
-const dirLight2 = new THREE.DirectionalLight(0xffffff, 0.5);
-dirLight2.position.set(-20, 30, -60);
-scene.add(dirLight2);
+const keyLight = new THREE.DirectionalLight(0xffffff, 0.85);
+keyLight.position.set(-70, 95, 95);
+scene.add(keyLight);
 
-const camera = new THREE.PerspectiveCamera(50, viewer.clientWidth / viewer.clientHeight, 0.1, 1000);
+const fillLight = new THREE.DirectionalLight(0xffffff, 0.32);
+fillLight.position.set(80, -85, 55);
+scene.add(fillLight);
+
+// เพิ่มไฟส่องด้านหลังป้าย เพื่อให้เวลาหมุนไปดูเบอร์โทรปั๊มจมด้านหลังเห็นร่องตัวเลขชัดเจน
+const backLight = new THREE.DirectionalLight(0xffffff, 0.55);
+backLight.position.set(30, -50, -80);
+scene.add(backLight);
+
+const initW = Math.max(100, viewer.clientWidth);
+const initH = Math.max(100, viewer.clientHeight);
+const camera = new THREE.PerspectiveCamera(50, initW / initH, 0.1, 1000);
 camera.position.set(0, -55, 65);
 
 const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
-renderer.setSize(viewer.clientWidth, viewer.clientHeight);
+renderer.setSize(initW, initH, false);
+renderer.setPixelRatio(window.devicePixelRatio);
 viewer.appendChild(renderer.domElement);
 
 const controls = new THREE.OrbitControls(camera, renderer.domElement);
 controls.enableDamping = true;
 
-const gridHelper = new THREE.GridHelper(256, 51, 0x555555, 0x333333);
+const gridHelper = new THREE.GridHelper(240, 24, 0x444444, 0x252525);
 gridHelper.rotation.x = Math.PI / 2; 
 scene.add(gridHelper);
 
@@ -255,11 +387,19 @@ scene.add(mainGroup);
 let dragControls;
 let draggableObjects = [];
 
-window.addEventListener('resize', () => {
-    camera.aspect = viewer.clientWidth / viewer.clientHeight;
+function handleViewerResize() {
+    if (!viewer || !renderer || !camera) return;
+    const cw = Math.max(50, viewer.clientWidth);
+    const ch = Math.max(50, viewer.clientHeight);
+    camera.aspect = cw / ch;
     camera.updateProjectionMatrix();
-    renderer.setSize(viewer.clientWidth, viewer.clientHeight);
-});
+    renderer.setSize(cw, ch, false);
+}
+
+window.addEventListener('resize', handleViewerResize);
+if (typeof ResizeObserver !== 'undefined') {
+    new ResizeObserver(handleViewerResize).observe(viewer);
+}
 
 function animate() {
     requestAnimationFrame(animate);
@@ -269,7 +409,7 @@ function animate() {
 animate();
 
 // ==========================================
-// 5. ฟังก์ชันช่วยคำนวณรูปทรง Clipper & Three.js
+// 6. ฟังก์ชันช่วยคำนวณรูปทรง Clipper & Three.js
 // ==========================================
 const SCALE = 1000;
 const svgLoader = new THREE.SVGLoader();
@@ -466,7 +606,7 @@ function getBackEngraveClipperPaths(text, fontSize, cx, cy) {
 }
 
 // ==========================================
-// 6. สร้างรูปทรงกระดูก ปลา วงกลม และอีโมจิ
+// 7. สร้างรูปทรงกระดูก ปลา วงกลม และอีโมจิ
 // ==========================================
 function buildBoneOutline(W) {
     const L = W * 0.30;
@@ -542,7 +682,6 @@ function makePawClipperPaths(cx, cy, size, angleDeg = 0) {
     return unionClipperPaths(parts);
 }
 
-// วาดรูปหัวใจด้วยสมการเส้นโค้งเดียว (Parametric Heart Curve) ตันสนิท 100% ไม่มีรอยแหว่งตรงกลาง
 function makeHeartClipperPaths(cx, cy, size) {
     const path = [];
     const segments = 64;
@@ -619,10 +758,11 @@ function addDraggableEmojiMesh(emojiObj, localClipperPaths, depth, zBottom, mate
 }
 
 // ==========================================
-// 7. ประมวลผลและสร้างโมเดล 3D
+// 8. ประมวลผลและสร้างโมเดล 3D
 // ==========================================
 function processModelUpdate() {
-    const targetPath = `font/${currentFontFile}`; 
+    const folder = getFontFolderPath();
+    const targetPath = `${folder}${encodeURI(currentFontFile)}`; 
     if (targetPath !== currentFontUrl) {
         opentype.load(targetPath, function (err, font) {
             if (err) return console.error('ไม่สามารถโหลดไฟล์ฟอนต์ได้:', err);
@@ -667,10 +807,10 @@ function generatePreview() {
     const baseColorHex = document.getElementById('baseColorInput').value;
     const topColorHex = document.getElementById('topColorInput').value;
 
-    const baseMat = new THREE.MeshPhongMaterial({ color: new THREE.Color(baseColorHex) });
-    const topMat = new THREE.MeshPhongMaterial({ color: new THREE.Color(topColorHex) });
+    // ใช้วัสดุ MeshStandardMaterial แบบเดียวกับ Tag กระเป๋า เพื่อให้แสงเงาดูนุ่มนวลและเห็นมิติชัดเจน
+    const baseMat = new THREE.MeshStandardMaterial({ color: new THREE.Color(baseColorHex), roughness: 0.45, metalness: 0.05 });
+    const topMat = new THREE.MeshStandardMaterial({ color: new THREE.Color(topColorHex), roughness: 0.4, metalness: 0.05 });
 
-    // 1. สร้างเส้นโครงร่างหลักตามรูปทรงที่เลือก
     let shapeData;
     if (currentPetShape === 'bone') {
         shapeData = buildBoneOutline(tagW);
@@ -683,7 +823,6 @@ function generatePreview() {
     const bodyOuterPaths = shapeData.paths;
     const bodyInnerPaths = offsetClipperPaths(bodyOuterPaths, -rimWidth);
 
-    // 2. สร้างติ่งห่วงคล้องพวงกุญแจด้านบนสุด
     const earOuterR = (currentPetShape === 'circle') ? 4.2 : 3.8;
     const earInnerR = (currentPetShape === 'circle') ? 1.8 : 1.6;
     const earCx = (currentPetShape === 'fish') ? shapeData.bodyCx * 0.4 : 0;
@@ -698,7 +837,6 @@ function generatePreview() {
 
     const fullBasePaths = diffClipperPaths(unionClipperPaths([...bodyOuterPaths, ...earOuterPaths]), earHolePaths);
 
-    // 3. สร้างกรอบขอบนูน (Rim) + ข้อความด้านหน้า
     let rimPaths = [];
     const topDepth = topThick + 0.02;
     const topZBottom = baseThick - 0.02;
@@ -714,7 +852,6 @@ function generatePreview() {
             addFrontTextMeshes(nameText, fontSize, shapeData.bodyCx * 0.5, 0, topDepth, topZBottom, topMat, 'top', mainGroup);
         }
     } else if (currentPetShape === 'circle') {
-        // กรอบวงแหวนด้านใน ปรับความหนาตามสไลเดอร์ rimWidth ได้เลย
         const ringOuter = offsetClipperPaths(bodyOuterPaths, -1.2);
         const ringInner = offsetClipperPaths(bodyOuterPaths, -(1.2 + rimWidth));
         rimPaths.push(...diffClipperPaths(ringOuter, ringInner));
@@ -737,7 +874,7 @@ function generatePreview() {
         }
     }
 
-    // 4. วาดอีโมจิทั้งหมดในรายการ (คลิกลากขยับได้ทุกชิ้น)
+    // วาดอีโมจิ (รอยเท้ากับหัวใจขยายตาม emojiScale ส่วนตาปลาคงขนาดตามสัดส่วนป้าย ไม่ขยายตามสไลเดอร์อีโมจิ)
     emojiItems.forEach(item => {
         let localPaths = [];
         if (item.type === 'paw') {
@@ -747,7 +884,8 @@ function generatePreview() {
             const baseHeartSize = tagW * 0.085;
             localPaths = makeHeartClipperPaths(0, 0, baseHeartSize * emojiScale);
         } else if (item.type === 'eye') {
-            localPaths = [makeCirclePath(0, 0, tagW * 0.018 * emojiScale, 20)];
+            // ล็อกขนาดตาปลาตามความกว้างป้าย (tagW * 0.018) ไม่คูณ emojiScale
+            localPaths = [makeCirclePath(0, 0, tagW * 0.018, 20)];
         }
         addDraggableEmojiMesh(item, localPaths, topDepth, topZBottom, topMat, 'top', mainGroup);
     });
@@ -756,7 +894,6 @@ function generatePreview() {
     const rimShapes = clipperPathsToShapes(unitedRimPaths);
     addExtrudedShapesToGroup(rimShapes, topDepth, topZBottom, topMat, 'top', mainGroup);
 
-    // 5. สร้างเนื้อฐาน 3D (Base Layer)
     if (currentPetShape === 'bone' || currentPetShape === 'fish') {
         const engraveDepth = 0.6;
         let backTextPaths = [];
@@ -807,7 +944,6 @@ function generatePreview() {
         }
     }
 
-    // 6. เปิดใช้งานระบบคลิกลากขยับอีโมจิ (DragControls)
     if (typeof THREE.DragControls !== 'undefined' && draggableObjects.length > 0) {
         dragControls = new THREE.DragControls(draggableObjects, camera, renderer.domElement);
         dragControls.addEventListener('dragstart', function (event) {
@@ -833,7 +969,7 @@ function generatePreview() {
 }
 
 // ==========================================
-// 8. ส่งออกไฟล์ STL และ 3MF (แยกสีสำหรับ Bambu Studio)
+// 9. ส่งออกไฟล์ STL และ 3MF (แยกสีสำหรับ Bambu Studio)
 // ==========================================
 function exportSTL() {
     const exporter = new THREE.STLExporter();
@@ -1007,7 +1143,7 @@ async function export3MF() {
     document.body.removeChild(link);
 }
 
-window.onload = () => {
+window.addEventListener("DOMContentLoaded", () => {
     initUI();
     resetDefaultEmojis();
-};
+});
