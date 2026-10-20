@@ -85,8 +85,14 @@
         #viewer { flex-grow: 1; position: relative; background-color: #1a1a1a; }
         
         h2 { margin-top: 0; color: #fff; font-size: 20px; border-bottom: 1px solid #333; padding-bottom: 12px; }
-        h3 { font-size: 14px; color: #aaa; margin-bottom: 10px; margin-top: 20px; }
+        h3 { font-size: 14px; color: #c9a77e; margin-bottom: 10px; margin-top: 0; }
         
+        /* เส้นแบ่งคั่นแต่ละหัวข้อ */
+        .section-divider {
+            border: 0;
+            border-top: 1px solid #2e2e2e;
+            margin: 18px 0;
+        }
         input[type="text"] { width: 100%; padding: 12px; border: 1px solid #444; border-radius: 8px; box-sizing: border-box; font-size: 16px; background-color: #2a2a2a; color: #fff; outline: none; transition: 0.3s; margin-bottom: 15px; }
         input[type="text"]:focus { border-color: #00ba7c; }
         
@@ -129,19 +135,22 @@
         <div class="brand"><span class="brand-icon"></span>Crafting 3D Studio</div>
         <a href="raised.html" class="nav-link active">พวงกุญแจอักษรนูน</a>
         <a href="recessed.html" class="nav-link">พวงกุญแจขอบนูน</a>
+        <a href="letter.html" class="nav-link">พวงกุญแจจี้ตัวอักษร</a>
+        <a href="pet.html" class="nav-link">ป้ายชื่อสัตว์เลี้ยง (Pet Tag)</a>
+        <a href="luggage.html" class="nav-link">ป้ายห้อยกระเป๋า (Luggage Tag)</a>
     </div>
 
     <!-- คอนเทนต์หลักซ้ายขวา -->
     <div id="main-content">
         <div id="sidebar">
             <h2>🎨 ปรับแต่งป้ายชื่อ 3D</h2>
-            
+            <h3>1. ระบุข้อความ</h3>  
             <input type="text" id="nameInput" value="Yourname" oninput="updatePreviewText(); processModelUpdate();">
-
-            <h3>รูปแบบตัวอักษร</h3>
+        <hr class="section-divider">
+            <h3>2. รูปแบบตัวอักษร</h3>
             <div id="fontGrid"></div>
-
-            <h3>ตั้งค่าสี (Colors)</h3>
+        <hr class="section-divider">    
+            <h3>3. ตั้งค่าสี (Colors)</h3>
             <div class="slider-group" style="display: flex; gap: 10px;">
                 <div style="flex: 1;">
                     <div class="slider-header"><span style="font-size: 11px;">สีฐาน (Base)</span></div>
@@ -152,15 +161,15 @@
                     <input type="color" id="topColorInput" value="#87cefa" oninput="processModelUpdate()" style="width: 100%; height: 35px; border: none; border-radius: 6px; cursor: pointer; background: #222; padding: 2px;">
                 </div>
             </div>
-
-            <h3>ขนาดตัวอักษร</h3>
+        <hr class="section-divider">    
+            <h3>4. ขนาดตัวอักษร</h3>
             <div class="segmented-control" id="sizeControl">
                 <!-- เปลี่ยนเป็น S(17), M(22), L(28) -->
                 <button class="seg-btn active" onclick="setSize(17, this)">S<br><span style="font-size:10px;font-weight:normal">17</span></button>
                 <button class="seg-btn" onclick="setSize(22, this)">M<br><span style="font-size:10px;font-weight:normal">22</span></button>
                 <button class="seg-btn" onclick="setSize(28, this)">L<br><span style="font-size:10px;font-weight:normal">28</span></button>
             </div>
-            
+           
             <div class="slider-group">
                 <div class="slider-header">
                     <span>ปรับขนาดละเอียด (mm)</span>
@@ -176,8 +185,33 @@
                 </div>
                 <input type="range" id="textBoldnessSlider" min="0.0" max="2.0" step="0.1" value="0.0" oninput="updateSlidersFromRange()">
             </div>
+        <hr class="section-divider">    
+            <!-- เพิ่มปุ่มเลือกทรงตัวอักษร: ขอบเหลี่ยม vs ขอบมนป่อง -->
+            <h3>5. รูปทรงความนูนตัวอักษร (Text Profile)</h3>
+            <div class="segmented-control" id="textStyleControl">
+                <button class="seg-btn active" onclick="setTextStyle('flat', this)">ขอบเหลี่ยม (Flat)</button>
+                <button class="seg-btn" onclick="setTextStyle('rounded', this)">ขอบมนป่อง (Rounded)</button>
+            </div>
 
-            <h3>รูปทรงฐาน (Base Shape)</h3>
+            <div class="slider-group">
+                <div class="slider-header">
+                    <span>ความสูงตัวอักษร (mm)</span>
+                    <input type="number" id="textHeightVal" class="slider-value-input" value="1.6" step="0.2" onkeypress="handleInputEnter(event, 'textHeightVal', 'textHeightSlider')" onblur="updateSlidersFromInput('textHeightVal', 'textHeightSlider')">
+                </div>
+                <input type="range" id="textHeightSlider" min="0.8" max="4.0" step="0.2" value="1.6" oninput="updateSlidersFromRange()">
+            </div>
+
+            <div id="bevelSettingsBlock" style="display: none;">
+                <div class="slider-group">
+                    <div class="slider-header">
+                        <span style="color: #00ba7c;">รัศมีความมนขอบ (Fillet) mm</span>
+                        <input type="number" id="bevelSizeVal" class="slider-value-input" value="0.8" step="0.1" onkeypress="handleInputEnter(event, 'bevelSizeVal', 'bevelSizeSlider')" onblur="updateSlidersFromInput('bevelSizeVal', 'bevelSizeSlider')">
+                    </div>
+                    <input type="range" id="bevelSizeSlider" min="0.2" max="2.0" step="0.1" value="0.8" oninput="updateSlidersFromRange()">
+                </div>
+            </div>
+        <hr class="section-divider">    
+            <h3>6. รูปทรงฐาน (Base Shape)</h3>
             <div class="segmented-control" id="baseTypeControl">
                 <button class="seg-btn active" onclick="setBaseType('outline', this)">ตามตัวอักษร</button>
                 <button class="seg-btn" onclick="setBaseType('rectangle', this)">สี่เหลี่ยมขอบมน</button>
@@ -226,7 +260,7 @@
             </div>
 
             <hr style="border: 0; border-top: 1px solid #333; margin: 20px 0 15px 0;">
-            <h3>ตั้งค่าพวงกุญแจ / ป้ายชื่อ</h3>
+            <h3>7. ตั้งค่าพวงกุญแจ / ป้ายชื่อ</h3>
             
             <div class="segmented-control" id="workTypeControl">
                 <button class="seg-btn active" onclick="setWorkType('keychain', this)">พวงกุญแจ (มีห่วง)</button>
@@ -261,5 +295,6 @@
 
     <!-- โหลดสคริปต์ของหน้า Raised -->
     <script src="script_raised.js"></script>
+    <script src="shop_system.js"></script>
 </body>
 </html>

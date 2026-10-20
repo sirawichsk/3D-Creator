@@ -1,0 +1,269 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <title>ป้ายชื่อสัตว์เลี้ยง (Pet Tag) - S.S. Crafting 3D Studio</title>
+    <link rel="icon" type="image/png" href="logo/logo.png">
+    
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/DragControls.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/exporters/STLExporter.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/opentype.js@1.3.4/dist/opentype.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/SVGLoader.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/clipper-lib@1.0.0/clipper.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+    
+    <style>
+        body { margin: 0; display: flex; flex-direction: column; font-family: 'Prompt', Tahoma, sans-serif; height: 100vh; overflow: hidden; background-color: #1a1a1a; color: #e0e0e0; }
+        
+        #topbar { 
+            height: 60px; min-height: 60px; max-height: 60px; flex-shrink: 0; 
+            background-color: #111; border-bottom: 1px solid #333; 
+            display: flex; align-items: center; padding: 0 20px; box-sizing: border-box; 
+        }
+        .brand { 
+            font-size: 20px; font-weight: bold; color: #c9a77e; margin-right: 40px; 
+            letter-spacing: 1px; display: flex; align-items: center; gap: 10px; line-height: 1;
+        }
+        .brand-icon { 
+            width: 30px; height: 30px; background-image: url('logo/logo.png'); 
+            background-size: cover; border-radius: 6px; display: inline-block; flex-shrink: 0; 
+        }
+        
+        .nav-link { 
+            color: #888; text-decoration: none; padding: 0 20px; height: 40px; 
+            display: inline-flex; align-items: center; justify-content: center;
+            font-size: 15px; font-weight: bold; line-height: 1; border-radius: 6px; 
+            margin-right: 5px; box-sizing: border-box; border: none; 
+        }
+        .nav-link:hover { color: #fff; background-color: #222; }
+        .nav-link.active { 
+            color: #fff; background-color: #2a2a2a; 
+            border-bottom-left-radius: 0; border-bottom-right-radius: 0; 
+            box-shadow: inset 0 -2px 0 0 #00ba7c; 
+        }
+        
+        #main-content { display: flex; flex-grow: 1; overflow: hidden; }
+        #sidebar { width: 410px; background-color: #121212; padding: 25px; box-shadow: 2px 0 15px rgba(0,0,0,0.8); z-index: 10; overflow-y: auto; border-right: 1px solid #333; }
+        #viewer { flex-grow: 1; position: relative; background-color: #1a1a1a; }
+        
+        h2 { margin-top: 0; color: #fff; font-size: 20px; border-bottom: 1px solid #333; padding-bottom: 12px; margin-bottom: 15px; }
+        h3 { font-size: 14px; color: #c9a77e; margin-bottom: 10px; margin-top: 0; }
+        
+        /* เส้นแบ่งคั่นแต่ละหัวข้อ */
+        .section-divider {
+            border: 0;
+            border-top: 1px solid #2e2e2e;
+            margin: 18px 0;
+        }
+        
+        input[type="text"] { width: 100%; padding: 10px 12px; border: 1px solid #444; border-radius: 8px; box-sizing: border-box; font-size: 15px; background-color: #2a2a2a; color: #fff; outline: none; transition: 0.3s; margin-bottom: 10px; }
+        input[type="text"]:focus { border-color: #00ba7c; }
+        
+        #fontGrid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 5px; max-height: 170px; overflow-y: auto; padding-right: 5px; }
+        .font-card { background-color: #222; border: 2px solid #333; border-radius: 8px; padding: 10px; cursor: pointer; transition: 0.2s; text-align: center; }
+        .font-card:hover { border-color: #555; }
+        .font-card.active { border-color: #00ba7c; background-color: #1a2a24; }
+        .font-card .preview-text { font-size: 17px; color: #fff; margin-bottom: 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .font-card .font-name { font-size: 11px; color: #888; }
+        
+        .segmented-control { display: flex; gap: 5px; background: #222; padding: 5px; border-radius: 10px; margin-bottom: 10px; }
+        .seg-btn { flex: 1; padding: 8px 4px; background: transparent; border: none; color: #aaa; border-radius: 6px; cursor: pointer; font-weight: bold; font-size: 12px; transition: 0.2s; text-align: center; }
+        .seg-btn.active { background: #3a3a3a; color: #fff; box-shadow: 0 2px 5px rgba(0,0,0,0.2); }
+        
+        .emoji-btn-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 12px; }
+        .emoji-btn { padding: 9px 8px; background: #252525; border: 1px solid #444; color: #eee; border-radius: 8px; cursor: pointer; font-size: 12px; font-weight: bold; transition: 0.2s; font-family: inherit; }
+        .emoji-btn:hover { background: #333; border-color: #00ba7c; }
+        .emoji-btn.danger:hover { background: #3a1a1a; border-color: #ff5555; color: #ff9999; }
+
+        .slider-group { margin-bottom: 12px; }
+        .slider-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px; font-size: 13px; color: #bbb; }
+        
+        .slider-value-input { background: #333; padding: 4px 6px; border: 1px solid #555; border-radius: 4px; color: #fff; font-weight: bold; width: 50px; text-align: center; font-size: 13px; outline: none; transition: 0.2s; font-family: inherit; }
+        .slider-value-input:focus { border-color: #00ba7c; background: #222; }
+        .slider-value-input::-webkit-outer-spin-button, .slider-value-input::-webkit-inner-spin-button { -webkit-appearance: none; appearance: none; margin: 0; }
+        .slider-value-input[type=number] { -moz-appearance: textfield; appearance: textfield; }
+        
+        input[type="range"] { width: 100%; accent-color: #c9a77e; cursor: pointer; }
+        
+        .info-box { background: #1a2621; border: 1px solid #00ba7c; border-radius: 8px; padding: 10px; font-size: 12px; color: #bde0d2; margin-bottom: 12px; line-height: 1.4; }
+        
+        .btn-stl { width: 100%; padding: 14px; background-color: #00ba7c; color: white; margin-top: 10px; border: none; border-radius: 8px; font-size: 15px; font-weight: bold; cursor: pointer; transition: 0.2s; }
+        .btn-stl:hover { background-color: #009664; }
+
+        .btn-3mf { width: 100%; padding: 14px; background-color: #0088cc; color: white; margin-top: 10px; border: none; border-radius: 8px; font-size: 15px; font-weight: bold; cursor: pointer; transition: 0.2s; }
+        .btn-3mf:hover { background-color: #006699; }
+        
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: #121212; }
+        ::-webkit-scrollbar-thumb { background: #444; border-radius: 4px; }
+    </style>
+</head>
+<body>
+
+    <div id="topbar">
+        <div class="brand"><span class="brand-icon"></span>Crafting 3D Studio</div>
+        <a href="raised.html" class="nav-link">พวงกุญแจอักษรนูน</a>
+        <a href="recessed.html" class="nav-link">พวงกุญแจขอบนูน</a>
+        <a href="letter.html" class="nav-link">พวงกุญแจจี้ตัวอักษร</a>
+        <a href="pet.html" class="nav-link active">ป้ายชื่อสัตว์เลี้ยง (Pet Tag)</a>
+        <a href="luggage.html" class="nav-link">ป้ายห้อยกระเป๋า (Luggage Tag)</a>
+    </div>
+
+    <div id="main-content">
+        <div id="sidebar">
+            <h2>🐾 ป้ายชื่อสัตว์เลี้ยง (Pet Tag)</h2>
+            
+            <h3>1. เลือกรูปทรงป้าย (Tag Shape)</h3>
+            <div class="segmented-control" id="shapeControl">
+                <button class="seg-btn active" onclick="setPetShape('bone', this)">🦴 กระดูก</button>
+                <button class="seg-btn" onclick="setPetShape('fish', this)">🐟 ปลา</button>
+                <button class="seg-btn" onclick="setPetShape('circle', this)">⭕ วงกลม (NFC)</button>
+            </div>
+
+            <hr class="section-divider">
+
+            <h3>2. ข้อมูลบนป้าย (Pet Info)</h3>
+            <label style="font-size: 12px; color: #bbb;">ชื่อสัตว์เลี้ยง (ด้านหน้า):</label>
+            <input type="text" id="nameInput" value="SIMBA" oninput="updatePreviewText(); processModelUpdate();">
+            
+            <label style="font-size: 12px; color: #bbb;" id="phoneLabel">เบอร์โทรศัพท์ (ปั๊มจมด้านหลัง ไม่ใส่สี):</label>
+            <input type="text" id="phoneInput" value="081-234-5678" placeholder="เว้นวรรค หรือใส่ / เพื่อขึ้นบรรทัดใหม่" oninput="processModelUpdate();">
+            <div id="backPhoneHint" style="font-size: 11px; color: #888; margin-top: -6px;">
+                *หมุนดูด้านหลังโมเดลได้ (พิมพ์ `/` หรือเว้นวรรคเพื่อแบ่ง 2 บรรทัด)
+            </div>
+
+            <hr class="section-divider">
+
+            <h3>3. ตกแต่งอีโมจิ (Emojis: รอยเท้า / หัวใจ)</h3>
+            <div class="emoji-btn-grid">
+                <button class="emoji-btn" onclick="addEmoji('paw')">+ 🐾 เพิ่มรอยเท้าหมา</button>
+                <button class="emoji-btn" onclick="addEmoji('heart')">+ ❤️ เพิ่มหัวใจ</button>
+                <button class="emoji-btn" onclick="resetDefaultEmojis()">🔄 รีเซ็ตค่าเริ่มต้น</button>
+                <button class="emoji-btn danger" onclick="clearAllEmojis()">🗑️ ไม่ใส่อีโมจิ (ลบหมด)</button>
+            </div>
+            <div class="slider-group">
+                <div class="slider-header">
+                    <span>ขนาดอีโมจิ (Emoji Scale)</span>
+                    <input type="number" id="emojiScaleVal" class="slider-value-input" value="1.0" step="0.1" onkeypress="handleInputEnter(event, 'emojiScaleVal', 'emojiScaleSlider')" onblur="updateSlidersFromInput('emojiScaleVal', 'emojiScaleSlider')">
+                </div>
+                <input type="range" id="emojiScaleSlider" min="0.5" max="2.0" step="0.1" value="1.0" oninput="updateSlidersFromRange()">
+            </div>
+            <div style="font-size: 11px; color: #888; margin-top: -6px;">
+                *คลิกที่รูปอีโมจิบนป้ายเพื่อลากปรับตำแหน่งได้อิสระทุกชิ้น
+            </div>
+
+            <!-- ตัวเลือกพิเศษเฉพาะทรงวงกลม (NFC) -->
+            <div id="circleOptionsBlock" style="display: none;">
+                <hr class="section-divider">
+                <h3>⚡ ตั้งค่าชิป NFC (เฉพาะทรงวงกลม)</h3>
+                <div class="segmented-control" id="nfcModeControl">
+                    <button class="seg-btn active" onclick="setCircleNfcMode(false, this)">❌ ไม่ใส่ NFC</button>
+                    <button class="seg-btn" onclick="setCircleNfcMode(true, this)">📲 ใส่ชิป NFC ด้านใน</button>
+                </div>
+
+                <div id="nfcSettingsBlock" style="display: none;">
+                    <div class="info-box">
+                        💡 <b>เจาะโพรงซ่อน NFC ตรงกลางป้าย:</b> พร้อมแสดงสัญลักษณ์คลื่น NFC ด้านล่างอัตโนมัติ (สั่ง Pause ใน Slicer เพื่อหย่อนเหรียญ NFC แล้วพิมพ์ทับได้เลย)
+                    </div>
+                    <div class="slider-group">
+                        <div class="slider-header">
+                            <span style="color: #00ba7c;">เส้นผ่านศูนย์กลางช่อง NFC (mm)</span>
+                            <input type="number" id="nfcDiaVal" class="slider-value-input" value="26.0" step="0.5" onkeypress="handleInputEnter(event, 'nfcDiaVal', 'nfcDiaSlider')" onblur="updateSlidersFromInput('nfcDiaVal', 'nfcDiaSlider')">
+                        </div>
+                        <input type="range" id="nfcDiaSlider" min="12.0" max="35.0" step="0.5" value="26.0" oninput="updateSlidersFromRange()">
+                    </div>
+                    <div class="slider-group">
+                        <div class="slider-header">
+                            <span style="color: #00ba7c;">ความหนาช่องว่าง NFC (mm)</span>
+                            <input type="number" id="nfcThickVal" class="slider-value-input" value="1.0" step="0.2" onkeypress="handleInputEnter(event, 'nfcThickVal', 'nfcThickSlider')" onblur="updateSlidersFromInput('nfcThickVal', 'nfcThickSlider')">
+                        </div>
+                        <input type="range" id="nfcThickSlider" min="0.6" max="2.0" step="0.2" value="1.0" oninput="updateSlidersFromRange()">
+                    </div>
+                </div>
+            </div>
+
+            <hr class="section-divider">
+
+            <h3>4. รูปแบบตัวอักษร (Font)</h3>
+            <div id="fontGrid"></div>
+
+            <hr class="section-divider">
+
+            <h3>5. ตั้งค่าสี (Colors)</h3>
+            <div class="slider-group" style="display: flex; gap: 10px; margin-bottom: 0;">
+                <div style="flex: 1;">
+                    <div class="slider-header"><span style="font-size: 11px;">สีฐาน (Base)</span></div>
+                    <input type="color" id="baseColorInput" value="#ffffff" oninput="processModelUpdate()" style="width: 100%; height: 35px; border: none; border-radius: 6px; cursor: pointer; background: #222; padding: 2px;">
+                </div>
+                <div style="flex: 1;">
+                    <div class="slider-header"><span style="font-size: 11px;">สีขอบ/ตัวอักษร (Top)</span></div>
+                    <input type="color" id="topColorInput" value="#76b843" oninput="processModelUpdate()" style="width: 100%; height: 35px; border: none; border-radius: 6px; cursor: pointer; background: #222; padding: 2px;">
+                </div>
+            </div>
+
+            <hr class="section-divider">
+
+            <h3>6. ปรับขนาดและสัดส่วน (Dimensions)</h3>
+            <div class="slider-group">
+                <div class="slider-header">
+                    <span>ความกว้างป้าย (Tag Width) mm</span>
+                    <input type="number" id="tagWidthVal" class="slider-value-input" value="50" step="1" onkeypress="handleInputEnter(event, 'tagWidthVal', 'tagWidthSlider')" onblur="updateSlidersFromInput('tagWidthVal', 'tagWidthSlider')">
+                </div>
+                <input type="range" id="tagWidthSlider" min="25" max="80" step="1" value="50" oninput="updateSlidersFromRange()">
+            </div>
+
+            <div class="slider-group">
+                <div class="slider-header">
+                    <span style="color: #00ba7c;">ความหนาของกรอบขอบป้าย (Rim) mm</span>
+                    <input type="number" id="rimWidthVal" class="slider-value-input" value="2.2" step="0.2" onkeypress="handleInputEnter(event, 'rimWidthVal', 'rimWidthSlider')" onblur="updateSlidersFromInput('rimWidthVal', 'rimWidthSlider')">
+                </div>
+                <input type="range" id="rimWidthSlider" min="0.8" max="4.0" step="0.1" value="2.2" oninput="updateSlidersFromRange()">
+            </div>
+
+            <div class="slider-group">
+                <div class="slider-header">
+                    <span>ขนาดตัวอักษรชื่อ (mm)</span>
+                    <input type="number" id="fontSizeVal" class="slider-value-input" value="9.0" step="0.5" onkeypress="handleInputEnter(event, 'fontSizeVal', 'fontSizeSlider')" onblur="updateSlidersFromInput('fontSizeVal', 'fontSizeSlider')">
+                </div>
+                <input type="range" id="fontSizeSlider" min="5.0" max="20.0" step="0.5" value="9.0" oninput="updateSlidersFromRange()">
+            </div>
+
+            <div class="slider-group">
+                <div class="slider-header">
+                    <span>ขนาดตัวเลขเบอร์โทร (mm)</span>
+                    <input type="number" id="phoneSizeVal" class="slider-value-input" value="5.5" step="0.5" onkeypress="handleInputEnter(event, 'phoneSizeVal', 'phoneSizeSlider')" onblur="updateSlidersFromInput('phoneSizeVal', 'phoneSizeSlider')">
+                </div>
+                <input type="range" id="phoneSizeSlider" min="3.5" max="12.0" step="0.5" value="5.5" oninput="updateSlidersFromRange()">
+            </div>
+
+            <div class="slider-group">
+                <div class="slider-header">
+                    <span>ความหนาฐานสีขาว (mm)</span>
+                    <input type="number" id="baseThickVal" class="slider-value-input" value="3.0" step="0.2" onkeypress="handleInputEnter(event, 'baseThickVal', 'baseThickSlider')" onblur="updateSlidersFromInput('baseThickVal', 'baseThickSlider')">
+                </div>
+                <input type="range" id="baseThickSlider" min="2.0" max="6.0" step="0.2" value="3.0" oninput="updateSlidersFromRange()">
+            </div>
+
+            <div class="slider-group">
+                <div class="slider-header">
+                    <span>ความนูนขอบและชื่อด้านหน้า (mm)</span>
+                    <input type="number" id="topThickVal" class="slider-value-input" value="1.0" step="0.2" onkeypress="handleInputEnter(event, 'topThickVal', 'topThickSlider')" onblur="updateSlidersFromInput('topThickVal', 'topThickSlider')">
+                </div>
+                <input type="range" id="topThickSlider" min="0.6" max="2.5" step="0.2" value="1.0" oninput="updateSlidersFromRange()">
+            </div>
+
+            <hr class="section-divider">
+
+            <button class="btn-stl" onclick="exportSTL()">📦 ดาวน์โหลดไฟล์ .STL</button>
+            <button class="btn-3mf" onclick="export3MF()">🌈 ดาวน์โหลดไฟล์ .3MF (แยกสี)</button>
+        </div>
+
+        <div id="viewer"></div>
+    </div>
+
+    <script src="script_pet.js"></script>
+    <script src="shop_system.js"></script>
+</body>
+</html>

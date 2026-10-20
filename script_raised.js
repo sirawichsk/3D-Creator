@@ -85,6 +85,16 @@ function setBaseType(type, btn) {
     processModelUpdate();
 }
 
+let currentTextStyle = 'flat'; // 'flat' หรือ 'rounded'
+
+function setTextStyle(style, btn) {
+    document.querySelectorAll('#textStyleControl .seg-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    currentTextStyle = style;
+    const block = document.getElementById('bevelSettingsBlock');
+    if (block) block.style.display = (style === 'rounded') ? 'block' : 'none';
+    processModelUpdate();
+}
 function setSize(size, btn) {
     document.getElementById('fontSizeSlider').value = size;
     updateSlidersFromRange(true); 
@@ -147,7 +157,15 @@ function updateSlidersFromRange(keepSizeBtnActive = false) {
     document.getElementById('rectPadXVal').value = padX.toFixed(0);
     document.getElementById('rectPadYVal').value = padY.toFixed(0);
     document.getElementById('rectRadiusVal').value = rRadius.toFixed(0);
-    
+
+    if (document.getElementById('textHeightSlider')) {
+        let tHeight = parseFloat(document.getElementById('textHeightSlider').value);
+        document.getElementById('textHeightVal').value = tHeight.toFixed(1);
+    }
+    if (document.getElementById('bevelSizeSlider')) {
+        let bSize = parseFloat(document.getElementById('bevelSizeSlider').value);
+        document.getElementById('bevelSizeVal').value = bSize.toFixed(1);
+    }
     processModelUpdate();
 }
 
@@ -236,7 +254,8 @@ function generatePreview() {
     const baseColorHex = document.getElementById('baseColorInput') ? document.getElementById('baseColorInput').value : '#ffffff';
     const topColorHex = document.getElementById('topColorInput') ? document.getElementById('topColorInput').value : '#87cefa';
     
-    const textHeight = 1.2;
+    const textHeight = document.getElementById('textHeightSlider') ? parseFloat(document.getElementById('textHeightSlider').value) : 1.6;
+    const bevelRadius = document.getElementById('bevelSizeSlider') ? parseFloat(document.getElementById('bevelSizeSlider').value) : 0.8;
     const curveResolution = 24;
     const scale = 1000; 
 
@@ -283,8 +302,8 @@ function generatePreview() {
         return res;
     }
 
-    // 2. สร้างความหนาตัวอักษร (ถ้า Boldness > 0)
-    let textShapesToRender = originalShapes;
+    // 2. เตรียมเส้น Path ของตัวอักษร
+    const baseTextClipperPaths = new ClipperLib.Paths();
     if (textBoldness > 0) {
         const coText = new ClipperLib.ClipperOffset();
         originalShapes.forEach(shape => {
@@ -295,21 +314,70 @@ function generatePreview() {
                 coText.AddPath(hPath, ClipperLib.JoinType.jtRound, ClipperLib.EndType.etClosedPolygon);
             });
         });
-        const offsetPaths = new ClipperLib.Paths();
-        coText.Execute(offsetPaths, textBoldness * scale);
-        textShapesToRender = clipperPathsToShapes(offsetPaths);
+        coText.Execute(baseTextClipperPaths, textBoldness * scale);
+    } else {
+        originalShapes.forEach(shape => {
+            baseTextClipperPaths.push(shape.getPoints().map(p => ({X: Math.round(p.x * scale), Y: Math.round(p.y * scale)})));
+            shape.holes.forEach(hole => {
+                baseTextClipperPaths.push(hole.getPoints().map(p => ({X: Math.round(p.x * scale), Y: Math.round(p.y * scale)})));
+            });
+        });
     }
 
-    // 3. เรนเดอร์ตัวอักษร 3 มิติ
-    textShapesToRender.forEach(shape => {
-        const textGeo = new THREE.ExtrudeGeometry(shape, { depth: textHeight, bevelEnabled: false, curveSegments: curveResolution });
-        textGeo.applyMatrix4(new THREE.Matrix4().makeRotationX(Math.PI));
-        textGeo.translate(0, 0, shadowThickness + textHeight);
-        fixNormals(textGeo);
-        const mesh = new THREE.Mesh(textGeo, new THREE.MeshPhongMaterial({ color: new THREE.Color(topColorHex) }));
-        mesh.userData.partType = 'top';
-        textGroup.add(mesh);
-    });
+    // 3. เรนเดอร์ตัวอักษร 3 มิติ (แยกโหมดขอบเหลี่ยม vs ขอบมนป่อง)
+    const textMaterial = new THREE.MeshPhongMaterial({ color: new THREE.Color(topColorHex) });
+
+    if (currentTextStyle === 'rounded') {
+        // สร้างเลเยอร์โค้งมนตามสมการวงกลม (Stepped Fillet Dome) 10 ชั้น (ละเอียดเท่ากับเลเยอร์ 0.16mm ของเครื่องพิมพ์)
+        const steps = 10; 
+        for (let s = 0; s < steps; s++) {
+            const t1 = s / steps;
+            const t2 = (s + 1) / steps;
+            
+            const zStart = shadowThickness + (t1 * textHeight);
+            const zEnd = shadowThickness + (t2 * textHeight);
+            const layerDepth = (zEnd - zStart) + 0.02; // เผื่อระยะจมยึดกัน 0.02mm ป้องกัน Open Edges
+            
+            // คำนวณระยะหดขอบเข้าด้านในตามความโค้งวงกลม
+            const angle = t1 * (Math.PI / 2);
+            const inset = bevelRadius * (1 - Math.sin(Math.PI / 2 - angle));
+            
+            let layerShapes = [];
+            if (inset <= 0.001) {
+                layerShapes = clipperPathsToShapes(baseTextClipperPaths);
+            } else {
+                const coLayer = new ClipperLib.ClipperOffset();
+                baseTextClipperPaths.forEach(p => {
+                    coLayer.AddPath(p, ClipperLib.JoinType.jtRound, ClipperLib.EndType.etClosedPolygon);
+                });
+                const insetPaths = new ClipperLib.Paths();
+                coLayer.Execute(insetPaths, -inset * scale);
+                layerShapes = clipperPathsToShapes(insetPaths);
+            }
+
+            layerShapes.forEach(shape => {
+                const textGeo = new THREE.ExtrudeGeometry(shape, { depth: layerDepth, bevelEnabled: false, curveSegments: curveResolution });
+                textGeo.applyMatrix4(new THREE.Matrix4().makeRotationX(Math.PI));
+                textGeo.translate(0, 0, zEnd);
+                fixNormals(textGeo);
+                const mesh = new THREE.Mesh(textGeo, textMaterial);
+                mesh.userData.partType = 'top';
+                textGroup.add(mesh);
+            });
+        }
+    } else {
+        // โหมดขอบเหลี่ยมปกติ
+        const textShapesToRender = clipperPathsToShapes(baseTextClipperPaths);
+        textShapesToRender.forEach(shape => {
+            const textGeo = new THREE.ExtrudeGeometry(shape, { depth: textHeight + 0.02, bevelEnabled: false, curveSegments: curveResolution });
+            textGeo.applyMatrix4(new THREE.Matrix4().makeRotationX(Math.PI));
+            textGeo.translate(0, 0, shadowThickness + textHeight);
+            fixNormals(textGeo);
+            const mesh = new THREE.Mesh(textGeo, textMaterial);
+            mesh.userData.partType = 'top';
+            textGroup.add(mesh);
+        });
+    }
 
     // ล็อกจุดศูนย์กลางข้อความให้อยู่ที่ 0,0 เสมอ
     const textBox = new THREE.Box3().setFromObject(textGroup);
